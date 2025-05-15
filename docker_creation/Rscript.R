@@ -353,7 +353,7 @@ if(normalization == TRUE){
       dir.create(paste0("/home/shared_folder/output_", current_time, "/bwa_index/"))
       dir.create(paste0("/home/shared_folder/output_", current_time, "/bwa_index/", genome))
       genome_folder = paste0("/home/shared_folder/output_", current_time, "/bwa_index/", genome)
-      #system2("/bwa/bwa", paste0("index -a bwtsw -p ", genome_folder, " ", fasta))
+      system2("/bwa/bwa", paste0("index -a bwtsw -p ", genome_folder, " ", fasta))
     }
   }
 }
