@@ -1,0 +1,46 @@
+[matrix]
+file = file_matrix
+title = HiC matrix
+colormap = RdYlBu_r
+depth =
+height = 10
+file_type = hic_matrix
+
+[tads]
+file = file_tads
+display = triangles
+border_color = black
+color = none
+overlay_previous = share-y
+
+[spacer]
+height = 0.1
+
+[PC_plot]
+file = file_pc
+title = compartments
+height = 3
+color = #F6222E
+negative_color = #3283FE
+min_value = -3
+max_value = 3
+alpha = 0.5
+nans_to_zeros = true
+file_type = bedgraph
+
+[PC_line]
+file = file_pc
+color = #F6222E
+negative_color = #3283FE
+alpha = 1
+type = line:1
+nans_to_zeros = true
+file_type = bedgraph
+overlay_previous = share-y
+
+[spacer]
+height = 0.5
+
+[x-axis]
+where = bottom
+    

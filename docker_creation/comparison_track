@@ -1,0 +1,153 @@
+[x-axis]
+where = bottom
+
+[PC_plot_k]
+file = file_pc_k
+title = compartments_k
+height = 3
+color = #F6222E
+negative_color = #3283FE
+min_value = -3
+max_value = 3
+alpha = 0.5
+nans_to_zeros = true
+file_type = bedgraph
+
+[PC_line_k]
+file = file_pc_k
+color = #F6222E
+negative_color = #3283FE
+alpha = 1
+type = line:1
+nans_to_zeros = true
+file_type = bedgraph
+overlay_previous = share-y
+
+[spacer]
+height = 0.5
+
+[PC_plot_i]
+file = file_pc_i
+title = compartments_i
+height = 3
+color = #F6222E
+negative_color = #3283FE
+min_value = -3
+max_value = 3
+alpha = 0.5
+nans_to_zeros = true
+file_type = bedgraph
+
+[PC_line_i]
+file = file_pc_i
+color = #F6222E
+negative_color = #3283FE
+alpha = 1
+type = line:1
+nans_to_zeros = true
+file_type = bedgraph
+overlay_previous = share-y
+
+[spacer]
+height = 0.5
+
+[distance]
+file = distance_file
+title = Mahalanobis distance
+height = 2
+color = #FEAF16
+alpha = 1
+type = line:1
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.1
+
+[pval_comp]
+file = pval_file_comp
+title = log10adjPval copartments
+height = 2
+color = #1CBE4F
+alpha = 1
+type = line:1
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.5
+
+[subcomp_k]
+file = file_sub_k
+title = subcomp_k
+height = 2
+min_value = -2
+max_value = 2
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.1
+
+[subcomp_i]
+file = file_sub_i
+title = subcomp_i
+height = 2
+min_value = -2
+max_value = 2
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.5
+
+[pval_subcomp]
+file = pval_file_subcomp
+title = log10adjPval subcopartments
+height = 2
+color = #1CBE4F
+alpha = 1
+type = line:1
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.5
+
+[loops_k]
+file = loops_file_k
+title = loops k
+height = 2.5 
+links_type = arcs
+color = #AA0DFE
+line_style = dashed
+use_middle = true
+line_width = 0.5
+file_type = links
+
+[spacer]
+height = 0.1
+
+[loops_i]
+file = loops_file_i
+title = loops i
+height = 2.5  
+links_type = arcs
+color = #AA0DFE
+line_style = dashed
+use_middle = true
+line_width = 0.5
+file_type = links
+
+[spacer]
+height = 0.5
+
+[pval_loops]
+file = pval_file_loops
+title = log10adjPval loops
+height = 2.5  
+links_type = arcs
+color = #1CBE4F
+use_middle = true
+file_type = links
+    

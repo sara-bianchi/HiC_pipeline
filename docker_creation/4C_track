@@ -1,0 +1,46 @@
+[v4C]
+file = file_4C
+title = title_4C_auto
+height = 6
+color = #FA0087
+alpha = 1
+type = line:1
+use_middle = true
+min_value = 0
+max_value = 1000
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.5
+
+[v4C_zoom]
+file = file_4C
+title = title_4C_zoom
+height = 6
+color = #FA0087
+alpha = 1
+type = line:1
+use_middle = true
+min_value = 0
+max_value = 100
+nans_to_zeros = true
+file_type = bedgraph
+
+[spacer]
+height = 0.5
+
+[viewpoint]
+file = file_viewpoint
+height = 1
+title = viewpoint
+color = grey
+labels = false
+nans_to_zeros = true
+style = flybase
+file_type = bed
+gene_rows = 1
+
+[x-axis]
+where = bottom
+    
