@@ -149,9 +149,9 @@ RUN chmod 777 /mapping_pipeline/two_read_bam_combiner.pl
 RUN apt-get update && apt-get install -y git && git clone https://github.com/lh3/bwa.git && cd bwa && make
 
 #java
-COPY jdk-17.0.12_linux-x64_bin.tar.gz /home/jdk-17.0.12_linux-x64_bin.tar.gz
+RUN wget https://download.oracle.com/java/17/archive/jdk-17.0.12_linux-x64_bin.tar.gz
 RUN mkdir -p /usr/lib/jvm
-RUN tar zxvf /home/jdk-17.0.12_linux-x64_bin.tar.gz -C /usr/lib/jvm
+RUN tar zxvf jdk-17.0.12_linux-x64_bin.tar.gz -C /usr/lib/jvm
 RUN update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/jdk-17.0.12/bin/java" 1
 RUN update-alternatives --set java /usr/lib/jvm/jdk-17.0.12/bin/java
 
