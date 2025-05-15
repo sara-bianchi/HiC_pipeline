@@ -1638,6 +1638,7 @@ if(targeted_analysis == TRUE){
         write.table(seeds, sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE, file = paste0("/home/shared_folder/output_", current_time, "/targeted_analysis/transC/seeds.bed"))
         
         system2("python", paste0("/trans-C/code/trans_C.py ", paths$raw_mcool[i], " ", chr_sizes_path, " ", as.character(j), " /home/shared_folder/output_", current_time, "/targeted_analysis/transC/seeds.bed ", transC_path, "/"))
+        system2("mv", paste0(transC_path, "/im_matrix.npy ", transC_path, "/transC_matrix_", paths$sample_ID[i], ".npy"))
         system2("mv", paste0(transC_path, "/bin_scores.txt ", transC_path, "/bin_scores_", paths$sample_ID[i], ".txt"))
         
         bin_map = read.delim(paste0(transC_path, "/bin_map_", as.character(j), ".bed"), header=FALSE)
