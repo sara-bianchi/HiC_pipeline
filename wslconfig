@@ -1,0 +1,8 @@
+# Settings apply across all Linux distros running on WSL 2
+[wsl2]
+
+# Limits VM memory to use no more than 100 GB, this can be set as whole numbers using GB or MB
+memory=100GB 
+
+# Sets the VM to use two virtual processors (max 12)
+processors=12
