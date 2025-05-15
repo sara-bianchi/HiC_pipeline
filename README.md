@@ -32,7 +32,7 @@ In your working directory you need to have:
 - the settings.xlsx file, which specifies the steps of the analysis that you want to perform and the parameters needed to run each step. Two examples of this file are provided. Similarly to the table.xlsx also for this file the path must be fixed as /home/shared_folder/settings.xlsx, meaning that you cannot change the name of this file or move it in subdirectories. This file is made up of at least three columns:
     - the first contains a unique identifier of the parameters which must never be changed
     - the second contains a brief explenation about how to compile this parameter
-    - the other ones contain the information needed for this specific parameter and can be edited. All the information must be added in order without leaving intermediate empty columns: for example, if only one info is needed (ex: alignment = TRUE/FALSE) the first column must be used, if more you should start top compile from the first column, then the second, and so on. The parameters which could need more columns are binning, res_untargeted, res_v4C, res_transC and seeds, which require to insert a list of bin sizes or chromosomal loci (one for each column). In this file it is also required to add the paths of the genome information files. All the possible parameters are provided, but once you have chosen with the TRUE/FALSE parameters to selectively run only some specific steps of your analysis, all the parameters related to deselected steps can be left empty (they will just be ignored by the pipeline). For example if you do not need to run the alignment step and you set it to FALSE, all the parameters related to this step, like aligner, trimming, binning and RE can be left empty.
+    - the other ones contain the information needed for this specific parameter and can be edited. All the information must be added in order without leaving intermediate empty columns: for example, if only one info is needed (ex: alignment = TRUE/FALSE) the first column must be used, if more you should start top compile from the first column, then the second, and so on. The parameters which could need more columns are binning, reference, res_untargeted, res_v4C, res_transC, viewpoint and seeds, which require to insert a list of bin sizes or chromosomal loci (one for each column). In this file it is also required to add the paths of the genome information files. All the possible parameters are provided, but once you have chosen with the TRUE/FALSE parameters to selectively run only some specific steps of your analysis, all the parameters related to deselected steps can be left empty (they will just be ignored by the pipeline). For example if you do not need to run the alignment step and you set it to FALSE, all the parameters related to this step, like aligner, trimming, binning and RE can be left empty.
 - Rscript.R which you can directly download in its latest version from this GitHub (you can find it in the docker_creation folder)
 
 # Running the pipeline
@@ -50,6 +50,33 @@ The only part that you need to edit is the container_name which should match the
 
 # Output interpretation
 In your working directory it will be created a new folder system:
-Output_yymmdd
-
+output_yymmdd
+- bwa_index / bowtie_index: indexed genome if indexing is performed within the pipeline (BWA for Arima and Bowtie-2 for HiC-Pro)
+- trimmed_fastq: trimmed FASTQ files if trimming has been performed
+- HiC-pro: HiC pro intermediate output, statistics and final matrices is allignment is performed with HiC-Pro
+- Arima: Arima intermediate output, statistics and final matrices is alignment is performed with Arima
+- cool_raw / cool_iced / h5_iced / mcool_raw / mcool_iced: folder with raw or normalized matrices in different formats based on the starting input and types of analyses required, each at the different binning sizes required in the settings
+- ICE_normalisation: HiC-pro output obtained after ICE normalization of the provided raw matrices
+- targeted_analysis:
+    - virtual_4C: bedGraph tracks of the virtual 4C interaction score for each viewpoint (calculated with the Bioconductor HiContacts package) and pdf plot of the 10 upstream and downstream bins from the viewpoint at different zoom levels (100 and 1000 maximal interaction values)
+    - transC: output of trans interacting network analysis (https://github.com/Noble-Lab/trans-C)
+        - transC normalized matrices (transC_matrix)
+        - raw bin score values (bin_acores_all)
+        - .bedGraph files of bin scores of trans chromosomes only (not same chromosomes of the loci in the initial clique)
+        - .pdf plot of trans bin scores interaction (bin_scores_trans)
+        - .pdf plot of the bin score density distribution with the 1%, 5% and 10% thresholds in red (density_plot)
+        - .pdf circular plot with the top ranked interactions from each of the starting seeds to the corresponding bin colored by percentile classification (1% is red, 1-5% is purple and 5-10% is light blue)
+- untargeted_analysis:
+    - autocorrelation: ct_perc plots with cis/trans interaction distribution across all the chromosomes and interaction map + autocorrelation matrix for each chromosome in each sample (HiContacts Bioconductor package)
+    - correlation: pearson correlation and PCA of the eigenvector values calculated for each sample
+    - dcHiC: dcHiC output for each of the possible comparisons with the reference condition indicated in the settings.xlsx file (PCA calculation, best PCA selection, differential compartments and subcompartments analysis, B to A genes GSEA, fitHiC loops identification, differential loops analysis and IGV summary)
+    - diff_loops: differential loops analysis performed with limma on fitHiC output after filtering for significant loops over the backgorund in all the samples of one same condition. The diff_loops files contain the limma output with logFC and adjusted p-value for each loop in each comparison.
+    - genom_tracks: pyGenometracks for each chromosomes for the individual samples (compartments, HiC matrix and TADs pattern), and for each comparison over the reference (compartments of the 2 conditions, mahalanobis distance and log10 adjusted-p-value of differentiual compartments, subcompartments for teh two conditions and log10 p-adjusted p-value, significatively identified loops in each condition and significatively identified loops in either conditions with width proportional to the -log10 adjusted p-value)
+    - gsea: gsea tables and enrichment plots for each ontology for each comparison of the genes in significantly different B to A compartments
+    - HiCrep: SCC score (stratified correlation coefficent) among the total HiC matrices and among each chromosome. The scc_score_all plot shows a summary of the distribution of the SCC score in all the chromosomes for all the possible pairs of samples
+    - IGV:
+          - IGV .bedGraph tracks of the compartments and subcompartments for each sample, and log10 p-adjusted of the compartments and subcompartments for each pair of conditions compared
+          - IGV .bedpe tracks of significantly different loops and log10 p-adjusted for each comaprison
+    - ratio: for each chromosome side to side and ratiometric matrices of each pair of samples of the same batch and different conditions (based on the selected references)
+    - TADs: TADs boundaries, score and domain classification for each sample
 
