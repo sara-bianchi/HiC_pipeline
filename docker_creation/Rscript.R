@@ -543,7 +543,7 @@ if(analysis == TRUE){
         colnames(paths) = c("sample_ID", paste0("raw_matrix_", as.character(j)), paste0("bed_", as.character(j)))
         table = table %>% dplyr::left_join(paths, by = "sample_ID")
         
-        if(targeted_analysis == TRUE){
+        if(transC == TRUE){
           
           dir.create(paste0("/home/shared_folder/output_", current_time, "/mcool_raw"))
           path_mcool = c()
@@ -602,6 +602,26 @@ if(analysis == TRUE){
             paths = data.frame(samples, path_matrix, path_bed)
             colnames(paths) = c("sample_ID", paste0("raw_matrix_", as.character(j)), paste0("bed_", as.character(j)))
             table = table %>% dplyr::left_join(paths, by = "sample_ID")
+            
+            if(transC == TRUE & j %in% res_transC){
+              
+              dir.create(paste0("/home/shared_folder/output_", current_time, "/mcool_raw"))
+              path_mcool = c()
+              colnames(paths) = c("sample_ID", "raw_matrix", "bed")
+              for(i in 1:length(rownames(paths))){
+                matrix_i = paths$raw_matrix[i]
+                bed_i = paths$bed[i]
+                out_i = paste0("/home/shared_folder/output_", current_time, "/mcool_raw/", table$sample_ID[i], "_", as.character(j), ".mcool")
+                
+                system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat mcool --outFileName ", out_i))
+                path_mcool = append(path_mcool, out_i)
+              }
+              
+              paths = data.frame(samples, path_mcool)
+              colnames(paths) = c("sample_ID", paste0("raw_mcool_", as.character(j)))
+              table = table %>% dplyr::left_join(paths, by = "sample_ID")
+              
+            }
           }
         }
       } else {
@@ -771,7 +791,6 @@ if(analysis == TRUE){
       table = table %>% dplyr::left_join(paths, by = "sample_ID")
     }
   }
-  
   
   if(untargeted_analysis == TRUE){
     
@@ -1631,7 +1650,12 @@ if(targeted_analysis == TRUE){
       dir.create(paste0("/home/shared_folder/output_", current_time, "/targeted_analysis/transC/", as.character(j)))
       transC_path = paste0("/home/shared_folder/output_", current_time, "/targeted_analysis/transC/", as.character(j))
       
-      paths = table %>% dplyr::select("sample_ID", "raw_mcool")
+      if("raw_mcool" %in% colnames(table)){
+        paths = table %>% dplyr::select("sample_ID", "raw_mcool")
+      } else{
+        paths = table %>% dplyr::select("sample_ID", paste0("raw_mcool_", as.character(j)))
+      }
+      
       colnames(paths) = c("sample_ID", "raw_mcool")
       for(i in 1:length(rownames(paths))){
         
