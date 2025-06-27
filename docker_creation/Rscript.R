@@ -331,6 +331,10 @@ if(normalization == TRUE){
   if(indexing == FALSE){
     if(length(unique(na.omit(settings$genome_folder))) != 1 | file.exists(settings$genome_folder[1]) == FALSE){
       stop("invalid argument for genome_folder")} else{genome_folder = settings$genome_folder[1]}
+    if(alignment == TRUE){if(aligner == "Arima" | (aligner == "HiC-pro" & RE != "")){
+      if(length(unique(na.omit(settings$fasta))) != 1 | file.exists(settings$fasta[1]) == FALSE){
+        stop("invalid argument for fasta")} else{fasta = settings$fasta[1]}
+    }}
   } else{
     if(length(unique(na.omit(settings$fasta))) != 1 | file.exists(settings$fasta[1]) == FALSE){
       stop("invalid argument for fasta")} else{fasta = settings$fasta[1]}
@@ -435,14 +439,15 @@ if(alignment == TRUE){
     dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/"))
     dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/raw_BAM/"))
     dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/filtered_BAM/"))
-    dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/combined_BAM/"))
+    dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/combined_BAM_step1/"))
+    dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/combined_BAM_step2/"))
     dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/deduplicated_BAM/"))
     dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/pairs/"))
     dir.create(paste0("/home/shared_folder/output_", current_time, "/Arima/matrix/"))
     
     matrix_hic = c()
     for(i in 1:length(rownames(table))){ 
-      genome_folder = paste0("/home/shared_folder/output_", current_time, "/bwa_index/", genome)
+      
       bam1 = paste0("/home/shared_folder/output_", current_time, "/Arima/raw_BAM/", table$sample_ID[i], "_R1.bam")
       bam2 = paste0("/home/shared_folder/output_", current_time, "/Arima/raw_BAM/", table$sample_ID[i], "_R2.bam")
       
@@ -460,9 +465,12 @@ if(alignment == TRUE){
         system2("rm", bam2)
       }
       
-      bam_c = paste0("/home/shared_folder/output_", current_time, "/Arima/combined_BAM/", table$sample_ID[i], ".bam")
-      system2("perl", paste0("/mapping_pipeline/two_read_bam_combiner.pl ", bam1_f, " ", bam2_f, " samtools 10 | samtools view -bS -t ", fasta, ".fai - | samtools sort -@ ", CPU, " -o ", bam_c, " -"))
-      system2("java", paste0("-Xmx4G -Djava.io.tmpdir=temp/ -jar /picard/build/libs/picard.jar AddOrReplaceReadGroups INPUT=", bam_c, " OUTPUT=", bam_c, " ID=", table$sample_ID[i], " LB=", table$sample_ID[i], " SM=", table$sample_ID[i], " PL=ILLUMINA PU=none"))
+      bam_c1 = paste0("/home/shared_folder/output_", current_time, "/Arima/combined_BAM_step1/", table$sample_ID[i], ".bam")
+      bam_c2 = paste0("/home/shared_folder/output_", current_time, "/Arima/combined_BAM_step2/", table$sample_ID[i], ".bam")
+      
+      system2("samtools", paste0("faidx ", fasta))
+      system2("perl", paste0("/mapping_pipeline/two_read_bam_combiner.pl ", bam1_f, " ", bam2_f, " samtools 10 | samtools view -bS -t ", fasta, ".fai - | samtools sort -@ ", CPU, " -o ", bam_c1, " -"))
+      system2("java", paste0("-Xmx4G -Djava.io.tmpdir=temp/ -jar /picard/build/libs/picard.jar AddOrReplaceReadGroups INPUT=", bam_c1, " OUTPUT=", bam_c2, " ID=", table$sample_ID[i], " LB=", table$sample_ID[i], " SM=", table$sample_ID[i], " PL=ILLUMINA PU=none"))
       
       if(keep_BAM == FALSE){
         system2("rm", bam1_f)
@@ -473,9 +481,10 @@ if(alignment == TRUE){
       metric_d = paste0("/home/shared_folder/output_", current_time, "/Arima/deduplicated_BAM/metric_", table$sample_ID[i], ".txt")
       stats_d = paste0("/home/shared_folder/output_", current_time, "/Arima/deduplicated_BAM/", table$sample_ID[i], ".stats")
       
-      system2("java", paste0("-Xmx30G -XX:-UseGCOverheadLimit -Djava.io.tmpdir=temp/ -jar /picard/build/libs/picard.jar MarkDuplicates INPUT=", bam_c, " OUTPUT=", bam_d, " METRICS_FILE=", metric_d, " TMP_DIR=/home/tmp ASSUME_SORTED=TRUE VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=TRUE"))
+      system2("java", paste0("-Xmx30G -XX:-UseGCOverheadLimit -Djava.io.tmpdir=temp/ -jar /picard/build/libs/picard.jar MarkDuplicates INPUT=", bam_c2, " OUTPUT=", bam_d, " ASSUME_SORTED=TRUE VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=TRUE"))
       if(keep_BAM == FALSE){
-        system2("rm", bam_c)
+        system2("rm", bam_c1)
+        system2("rm", bam_c2)
       }
       system2("samtools", paste0("index ", bam_d))
       system2("perl", paste0("/mapping_pipeline/get_stats.pl ", bam_d, " > ", stats_d))
@@ -572,58 +581,31 @@ if(analysis == TRUE){
         
         #hic to HiC-pro
         dir.create(paste0("/home/shared_folder/output_", current_time, "/format_conversion"))
-        conda_run2(
-          envname = "dchic",
-          cmd_line = "pip install hic-straw",
-          echo = TRUE)
         
-        for(j in res){
-          dir.create(paste0("/home/shared_folder/output_", current_time, "/format_conversion/", as.character(j)))
-          out_j = paste0("/home/shared_folder/output_", current_time, "/format_conversion/", as.character(j), "/")
-          paths = table %>% dplyr::select(c("sample_ID", "matrix"))
-          path_matrix = c()
-          path_bed = c()
-          for(i in 1:length(rownames(paths))){
-            conda_run2(
-              envname = "dchic",
-              cmd_line = paste0("python /preprocess.py -input hic -file ", paths$matrix[i], " -res ", as.character(j), " -prefix ", table$sample_ID[i]),
-              echo = TRUE)
-            system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), ".matrix ", out_j))
-            system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), "_abs.bed ", out_j))
-            path_matrix = append(path_matrix, paste0(out_j, paths$sample_ID[i], "_", as.character(j), ".matrix"))
-            path_bed = append(path_bed, paste0(out_j, paths$sample_ID[i], "_", as.character(j), "_abs.bed"))
-          }
+        out = paste0("/home/shared_folder/output_", current_time, "/format_conversion/")
+        paths = table %>% dplyr::select(c("sample_ID", "matrix"))
+        path_matrix = c()
+        path_bed = c()
+        system2("conda", "create -n hictk -c conda-forge -c bioconda hictk")
+        for(i in 1:length(rownames(paths))){
+          conda_run2(
+            envname = "hictk",
+            cmd_line = paste0("hictk convert ", paths$matrix[i], " ", out, paths$sample_ID[i], ".mcool"),
+            echo = TRUE)
           
-          if(normalized == TRUE){
-            paths = data.frame(samples, path_matrix, path_bed)
-            colnames(paths) = c("sample_ID", paste0("iced_matrix_", as.character(j)), paste0("bed_", as.character(j)))
-            table = table %>% dplyr::left_join(paths, by = "sample_ID")
-          } else {
-            paths = data.frame(samples, path_matrix, path_bed)
-            colnames(paths) = c("sample_ID", paste0("raw_matrix_", as.character(j)), paste0("bed_", as.character(j)))
-            table = table %>% dplyr::left_join(paths, by = "sample_ID")
-            
-            if(transC == TRUE & j %in% res_transC){
-              
-              dir.create(paste0("/home/shared_folder/output_", current_time, "/mcool_raw"))
-              path_mcool = c()
-              colnames(paths) = c("sample_ID", "raw_matrix", "bed")
-              for(i in 1:length(rownames(paths))){
-                matrix_i = paths$raw_matrix[i]
-                bed_i = paths$bed[i]
-                out_i = paste0("/home/shared_folder/output_", current_time, "/mcool_raw/", table$sample_ID[i], "_", as.character(j), ".mcool")
-                
-                system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat mcool --outFileName ", out_i))
-                path_mcool = append(path_mcool, out_i)
-              }
-              
-              paths = data.frame(samples, path_mcool)
-              colnames(paths) = c("sample_ID", paste0("raw_mcool_", as.character(j)))
-              table = table %>% dplyr::left_join(paths, by = "sample_ID")
-              
-            }
-          }
+          path_mcool = append(path_matrix, paste0(out, paths$sample_ID[i], ".mcool"))
         }
+        
+        if(normalized == TRUE){
+          paths = data.frame(samples, path_mcool)
+          colnames(paths) = c("sample_ID", "iced_mcool")
+          table = table %>% dplyr::left_join(paths, by = "sample_ID")
+        } else {
+          paths = data.frame(samples, path_mcool)
+          colnames(paths) = c("sample_ID", "raw_mcool")
+          table = table %>% dplyr::left_join(paths, by = "sample_ID")
+        }
+        
       } else {
         is_cool = 0
         for(i in table$format){if(!i %in% c("mcool", "cool")) {is_cool = is_cool + 1}}
@@ -782,7 +764,7 @@ if(analysis == TRUE){
         matrix_i = paths$iced_matrix[i]
         bed_i = paths$bed[i]
         out_i = paste0("/home/shared_folder/output_", current_time, "/mcool_iced/", as.character(j), "/", paths$sample_ID[i], "_", as.character(j), "_iced.mcool")
-        #system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat mcool --outFileName ", out_i))
+        system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat mcool --outFileName ", out_i))
         path_mcool = append(path_mcool, out_i)
       }
       
@@ -807,7 +789,7 @@ if(analysis == TRUE){
         matrix_i = paths$iced_matrix[i]
         bed_i = paths$bed[i]
         out_i = paste0("/home/shared_folder/output_", current_time, "/h5_iced/", as.character(j), "/", paths$sample_ID[i], "_", as.character(j), "_iced.h5")
-        #system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat h5 --outFileName ", out_i))
+        system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat h5 --outFileName ", out_i))
         path_h5 = append(path_h5, out_i)
       }
       
@@ -825,7 +807,7 @@ if(analysis == TRUE){
         matrix_i = paths$iced_matrix[i]
         bed_i = paths$bed[i]
         out_i = paste0("/home/shared_folder/output_", current_time, "/cool_iced/", as.character(j), "/", paths$sample_ID[i], "_", as.character(j), "_iced.cool")
-        #system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat cool --outFileName ", out_i))
+        system2("hicConvertFormat", paste0("--matrices ", matrix_i, " --bedFileHicpro ", bed_i, " --inputFormat hicpro --outputFormat cool --outFileName ", out_i))
         path_cool = append(path_cool, out_i)
       }
       
@@ -1606,7 +1588,7 @@ if(targeted_analysis == TRUE){
       viewpoint_f = paste0(vp$chr[v], "_", vp$start[v], "_", vp$end[v])
       write.table(v_bed, sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE, file = paste0("/home/shared_folder/output_", current_time, "/targeted_analysis/virtual_4C/", viewpoint_f, ".bed"))
     }
-    
+    print(colnames(table))
     for(j in res_v4C){
       dir.create(paste0("/home/shared_folder/output_", current_time, "/targeted_analysis/virtual_4C/", as.character(j)))
       vir4C_path = paste0("/home/shared_folder/output_", current_time, "/targeted_analysis/virtual_4C/", as.character(j), "/")
@@ -1615,6 +1597,7 @@ if(targeted_analysis == TRUE){
       colnames(paths) = c("sample_ID", "iced_mcool")
       
       for(i in 1:length(rownames(paths))){
+        print(paths$iced_mcool[i])
         hic = HiCExperiment::import(paths$iced_mcool[i], format = "mcool", resolution = j)
         for(v in 1:length(rownames(vp))){
           viewpoint = paste0(vp$chr[v], ":", vp$start[v], "-", vp$end[v])
