@@ -481,7 +481,7 @@ if(alignment == TRUE){
       metric_d = paste0("/home/shared_folder/output_", current_time, "/Arima/deduplicated_BAM/metric_", table$sample_ID[i], ".txt")
       stats_d = paste0("/home/shared_folder/output_", current_time, "/Arima/deduplicated_BAM/", table$sample_ID[i], ".stats")
       
-      system2("java", paste0("-Xmx30G -XX:-UseGCOverheadLimit -Djava.io.tmpdir=temp/ -jar /picard/build/libs/picard.jar MarkDuplicates INPUT=", bam_c2, " OUTPUT=", bam_d, " ASSUME_SORTED=TRUE VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=TRUE"))
+      system2("java", paste0("-Xmx30G -XX:-UseGCOverheadLimit -Djava.io.tmpdir=temp/ -jar /picard/build/libs/picard.jar MarkDuplicates INPUT=", bam_c2, " OUTPUT=", bam_d, " ASSUME_SORTED=TRUE VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=TRUE METRICS_FILE=", metric_d))
       if(keep_BAM == FALSE){
         system2("rm", bam_c1)
         system2("rm", bam_c2)
