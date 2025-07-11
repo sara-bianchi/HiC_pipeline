@@ -28,6 +28,7 @@ library(Rlab)
 library(patchwork)
 library(cowplot)
 library(hicrep)
+library(limma)
 
 #set up environment
 theme_set(theme_bw(12) + 
@@ -497,7 +498,7 @@ if(alignment == TRUE){
       }
       
       matrix = paste0("/home/shared_folder/output_", current_time, "/Arima/matrix/", table$sample_ID[i], ".hic")
-      system2("java", paste0("-Xmx1G -jar /home/juicer_tools_1.13.02.jar pre ", pairs, ".bsorted.pairs.gz ", matrix, " ", chr_sizes_path))
+      system2("java", paste0("-jar /home/juicer_tools_1.13.02.jar pre ", pairs, ".bsorted.pairs.gz ", matrix, " ", chr_sizes_path))
       matrix_hic = append(matrix_hic, matrix)
     }
     table$matrix = matrix_hic
@@ -593,15 +594,15 @@ if(analysis == TRUE){
             cmd_line = paste0("hictk convert ", paths$matrix[i], " ", out, paths$sample_ID[i], ".mcool"),
             echo = TRUE)
           
-          path_mcool = append(path_matrix, paste0(out, paths$sample_ID[i], ".mcool"))
+          path_matrix = append(path_matrix, paste0(out, paths$sample_ID[i], ".mcool"))
         }
         
         if(normalized == TRUE){
-          paths = data.frame(samples, path_mcool)
+          paths = data.frame(samples, path_matrix)
           colnames(paths) = c("sample_ID", "iced_mcool")
           table = table %>% dplyr::left_join(paths, by = "sample_ID")
         } else {
-          paths = data.frame(samples, path_mcool)
+          paths = data.frame(samples, path_matrix)
           colnames(paths) = c("sample_ID", "raw_mcool")
           table = table %>% dplyr::left_join(paths, by = "sample_ID")
         }
@@ -659,47 +660,47 @@ if(analysis == TRUE){
             table = table %>% dplyr::left_join(paths, by = "sample_ID")
           }
         }
+      }
+      
+      #mcool/cool to HiC-pro
+      dir.create(paste0("/home/shared_folder/output_", current_time, "/format_conversion"))
+      for(j in res){
+        dir.create(paste0("/home/shared_folder/output_", current_time, "/format_conversion/", as.character(j)))
+        out_j = paste0("/home/shared_folder/output_", current_time, "/format_conversion/", as.character(j), "/")
         
-        #mcool/cool to HiC-pro
-        dir.create(paste0("/home/shared_folder/output_", current_time, "/format_conversion"))
-        for(j in res){
-          dir.create(paste0("/home/shared_folder/output_", current_time, "/format_conversion/", as.character(j)))
-          out_j = paste0("/home/shared_folder/output_", current_time, "/format_conversion/", as.character(j), "/")
-          
-          if(normalized == TRUE){
-            paths = table %>% dplyr::select(c("sample_ID", "iced_mcool"))
-            path_matrix = c()
-            path_bed = c()
-            colnames(paths) = c("sample_ID", "iced_mcool")
-            for(i in 1:length(rownames(paths))){
-              system2("python", paste0("/preprocess.py -input cool -file ", paths$iced_mcool[i], " -res ", as.character(j), " -prefix ", table$sample_ID[i], " -genomeFile ", chr_sizes_path))
-              system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), ".matrix ", out_j))
-              system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), "_abs.bed ", out_j))
-              path_matrix = append(path_matrix, paste0(out_j, paths$sample_ID[i], "_", as.character(j), ".matrix"))
-              path_bed = append(path_bed, paste0(out_j, paths$sample_ID[i], "_", as.character(j), "_abs.bed"))
-            }
-            
-            paths = data.frame(samples, path_matrix, path_bed)
-            colnames(paths) = c("sample_ID", paste0("iced_matrix_", as.character(j)), paste0("bed_", as.character(j)))
-            table = table %>% dplyr::left_join(paths, by = "sample_ID")
-            
-          } else {
-            paths = table %>% dplyr::select(c("sample_ID", "raw_mcool"))
-            path_matrix = c()
-            path_bed = c()
-            colnames(paths) = c("sample_ID", "raw_mcool")
-            for(i in 1:length(rownames(paths))){
-              system2("python", paste0("/preprocess.py -input cool -file ", paths$raw_mcool[i], " -res ", as.character(j), " -prefix ", table$sample_ID[i], " -genomeFile ", chr_sizes_path))
-              system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), ".matrix ", out_j))
-              system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), "_abs.bed ", out_j))
-              path_matrix = append(path_matrix, paste0(out_j, paths$sample_ID[i], "_", as.character(j), ".matrix"))
-              path_bed = append(path_bed, paste0(out_j, paths$sample_ID[i], "_", as.character(j), "_abs.bed"))
-            }
-            
-            paths = data.frame(samples, path_matrix, path_bed)
-            colnames(paths) = c("sample_ID", paste0("raw_matrix_", as.character(j)), paste0("bed_", as.character(j)))
-            table = table %>% dplyr::left_join(paths, by = "sample_ID")
+        if(normalized == TRUE){
+          paths = table %>% dplyr::select(c("sample_ID", "iced_mcool"))
+          path_matrix = c()
+          path_bed = c()
+          colnames(paths) = c("sample_ID", "iced_mcool")
+          for(i in 1:length(rownames(paths))){
+            system2("python", paste0("/preprocess.py -input cool -file ", paths$iced_mcool[i], " -res ", as.character(j), " -prefix ", table$sample_ID[i], " -genomeFile ", chr_sizes_path))
+            system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), ".matrix ", out_j))
+            system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), "_abs.bed ", out_j))
+            path_matrix = append(path_matrix, paste0(out_j, paths$sample_ID[i], "_", as.character(j), ".matrix"))
+            path_bed = append(path_bed, paste0(out_j, paths$sample_ID[i], "_", as.character(j), "_abs.bed"))
           }
+          
+          paths = data.frame(samples, path_matrix, path_bed)
+          colnames(paths) = c("sample_ID", paste0("iced_matrix_", as.character(j)), paste0("bed_", as.character(j)))
+          table = table %>% dplyr::left_join(paths, by = "sample_ID")
+          
+        } else {
+          paths = table %>% dplyr::select(c("sample_ID", "raw_mcool"))
+          path_matrix = c()
+          path_bed = c()
+          colnames(paths) = c("sample_ID", "raw_mcool")
+          for(i in 1:length(rownames(paths))){
+            system2("python", paste0("/preprocess.py -input cool -file ", paths$raw_mcool[i], " -res ", as.character(j), " -prefix ", table$sample_ID[i], " -genomeFile ", chr_sizes_path))
+            system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), ".matrix ", out_j))
+            system2("mv", paste0(paths$sample_ID[i], "_", as.character(j), "_abs.bed ", out_j))
+            path_matrix = append(path_matrix, paste0(out_j, paths$sample_ID[i], "_", as.character(j), ".matrix"))
+            path_bed = append(path_bed, paste0(out_j, paths$sample_ID[i], "_", as.character(j), "_abs.bed"))
+          }
+          
+          paths = data.frame(samples, path_matrix, path_bed)
+          colnames(paths) = c("sample_ID", paste0("raw_matrix_", as.character(j)), paste0("bed_", as.character(j)))
+          table = table %>% dplyr::left_join(paths, by = "sample_ID")
         }
       }
     }
@@ -1091,7 +1092,7 @@ if(untargeted_analysis == TRUE){
     ggsave(filename = paste0(HiCrep_path, "/scc_score_all.pdf"), width = 20, height = 10)
     
     #dcHiC
-    if("bias" %in% colnames(table)){
+    if("bias" %in% colnames(table) | paste0("bias_", as.character(j)) %in% colnames(table)){
       paths = table %>% dplyr::select(c("sample_ID", "condition", paste0("bed_", as.character(j)), paste0("iced_matrix_", as.character(j)), paste0("bias_", as.character(j))))
       colnames(paths) = c("sample_ID", "condition", "bed", "iced_matrix", "bias")
       new_beds = c()
@@ -1410,7 +1411,7 @@ if(untargeted_analysis == TRUE){
           
           for(m in samples){
             if(file.exists(paste0(IGV_path, "compartments_", m, "_", as.character(j), ".bedGraph")) == FALSE){
-              system2("cp", paste0(viz_path,  "intra_", m, "_PC.BedGraph ", IGV_path, "compartments_", m, "_", as.character(j), ".bedGraph"))
+              system2("cp", paste0(viz_path,  "intra_", m, "_PC.bedGraph ", IGV_path, "compartments_", m, "_", as.character(j), ".bedGraph"))
             }
           }
           
@@ -1554,7 +1555,7 @@ if(untargeted_analysis == TRUE){
           system2("sed", paste0("-i 's|title = subcomp_k|title = subcompartments ", k, "|g' ", track_path, "track_", k, "_vs_", i))
           system2("sed", paste0("-i 's|title = subcomp_i|title = subcompartments ", i, "|g' ", track_path, "track_", k, "_vs_", i))
           
-          if("bias" %in% colnames(table)){
+          if("bias" %in% colnames(table) | paste0("bias_", as.character(j)) %in% colnames(table)){
             system2("sed", paste0("-i 's|file = pval_file_loops|file = ", IGV_path, "diff_loops_log10adjPval_", as.character(j), "_", k, "_vs_", i, ".bedpe|g' ", track_path, "track_", k, "_vs_", i))
             system2("sed", paste0("-i 's|file = loops_file_k|file = ", IGV_path, "diff_loops_", as.character(j), "_", k, "_diff_", i, ".bedpe|g' ", track_path, "track_", k, "_vs_", i))
             system2("sed", paste0("-i 's|file = loops_file_i|file = ", IGV_path, "diff_loops_", as.character(j), "_", i, "_diff_", k, ".bedpe|g' ", track_path, "track_", k, "_vs_", i))
