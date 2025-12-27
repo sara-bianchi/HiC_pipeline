@@ -330,7 +330,7 @@ if(normalization == TRUE){
   
   
   if(indexing == FALSE){
-    if(length(unique(na.omit(settings$genome_folder))) != 1 | file.exists(settings$genome_folder[1]) == FALSE){
+    if(length(unique(na.omit(settings$genome_folder))) != 1){
       stop("invalid argument for genome_folder")} else{genome_folder = settings$genome_folder[1]}
     if(alignment == TRUE){if(aligner == "Arima" | (aligner == "HiC-pro" & RE != "")){
       if(length(unique(na.omit(settings$fasta))) != 1 | file.exists(settings$fasta[1]) == FALSE){
