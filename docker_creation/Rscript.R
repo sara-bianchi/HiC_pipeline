@@ -587,7 +587,7 @@ if(analysis == TRUE){
         paths = table %>% dplyr::select(c("sample_ID", "matrix"))
         path_matrix = c()
         path_bed = c()
-        system2("conda", "create -n hictk -c conda-forge -c bioconda hictk")
+        system2("conda", "create -y -n hictk -c conda-forge -c bioconda hictk")
         for(i in 1:length(rownames(paths))){
           conda_run2(
             envname = "hictk",
