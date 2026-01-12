@@ -348,7 +348,7 @@ if(normalization == TRUE){
       
       dir.create(paste0("/home/shared_folder/output_", current_time, "/bowtie_index/"))
       dir.create(paste0("/home/shared_folder/output_", current_time, "/bowtie_index/", genome))
-      genome_folder = paste0("/home/shared_folder/output_", current_time, "/bowtie_index/", genome)
+      genome_folder = paste0("/home/shared_folder/output_", current_time, "/bowtie_index/")
       system2("bowtie2-build", paste0(fasta, " ", genome))
       system2("mv", paste0(genome, "* ", genome_folder))
     }
