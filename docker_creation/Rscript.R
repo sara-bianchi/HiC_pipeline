@@ -832,7 +832,6 @@ if(untargeted_analysis == TRUE){
   dir.create(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/diff_loops"))
   dir.create(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/IGV"))
   dir.create(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/gsea"))
-  dir.create(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/correlation"))
   dir.create(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/genomeTracks"))
   
   for(j in res_untargeted){
@@ -1037,9 +1036,11 @@ if(untargeted_analysis == TRUE){
     rownames(ann_col) = paths$sample_ID
     tab = as.data.frame(apply(tab, 2, as.numeric))
     rownames(tab) = colnames(tab)
-    as.ggplot(pheatmap(tab, annotation_row = ann_row, annotation_col = ann_col, display_numbers = T, number_format = "%.2f", number_color = "black"))
-    ggsave(filename = paste0(HiCrep_path, "/scc_score.pdf"), width = 10, height = 10)
-    
+    if(length(rownames(paths)) > 2){
+      as.ggplot(pheatmap(tab, annotation_row = ann_row, annotation_col = ann_col, display_numbers = T, number_format = "%.2f", number_color = "black"))
+      ggsave(filename = paste0(HiCrep_path, "/scc_score.pdf"), width = 10, height = 10)
+    }
+              
     for(c in chrom_sizes$chr){
       tab = data.frame(rn = paths$sample_ID)
       cnames = colnames(tab)
@@ -1083,8 +1084,10 @@ if(untargeted_analysis == TRUE){
       rownames(ann_col) = paths$sample_ID
       tab = as.data.frame(apply(tab, 2, as.numeric))
       rownames(tab) = colnames(tab)
-      as.ggplot(pheatmap(tab, annotation_row = ann_row, annotation_col = ann_col, display_numbers = T, number_format = "%.2f", number_color = "black"))
-      ggsave(filename = paste0(HiCrep_path, "/scc_score_", c, ".pdf"), width = 10, height = 10)
+      if(length(rownames(paths)) > 2){
+        as.ggplot(pheatmap(tab, annotation_row = ann_row, annotation_col = ann_col, display_numbers = T, number_format = "%.2f", number_color = "black"))
+        ggsave(filename = paste0(HiCrep_path, "/scc_score_", c, ".pdf"), width = 10, height = 10)
+      }
     }
     
     melt = melt(tab_all)
@@ -1480,37 +1483,40 @@ if(untargeted_analysis == TRUE){
       }
     
     #PCA
-    PCs = c()
-    for(i in 1:length(rownames(table))){
-      PC_i = paste0(IGV_path,  "compartments_", table$sample_ID[i], "_", as.character(j), ".bedGraph")
-      PCs = append(PCs, PC_i)
+    if(nrow(table) > 2){
+      dir.create(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/comp_correlation"))
+      PCs = c()
+      for(i in 1:length(rownames(table))){
+        PC_i = paste0(IGV_path,  "compartments_", table$sample_ID[i], "_", as.character(j), ".bedGraph")
+        PCs = append(PCs, PC_i)
+      }
+      
+      table$PC = PCs
+      PC_table = read.csv(table$PC[1], header=FALSE, skip = 4, sep = "\t")
+      colnames(PC_table) = c("chr", "start", "end", table$sample_ID[1])
+      for(i in 2:length(rownames(table))){
+        PC_i = read.csv(table$PC[i], header=FALSE, skip = 4, sep = "\t")
+        colnames(PC_i) = c("chr", "start", "end", table$sample_ID[i])
+        PC_table = PC_table %>% dplyr::left_join(PC_i, by = c("chr", "start", "end"))
+      }
+      
+      PC_matrix = PC_table %>% dplyr::select(-c("chr", "start", "end"))
+      PC_matrix <- na.omit(PC_matrix)
+      n = length(rownames(table))
+      c_names = colnames(PC_matrix) 
+      colnames(PC_matrix) = c(1:n)
+      PC_matrix = PC_matrix %>% dplyr::mutate(sum = rowSums(PC_matrix)) %>% dplyr::filter(sum != 0) %>% dplyr::filter(sum != n * PC_matrix$'1') %>% dplyr::select(- sum)
+      colnames(PC_matrix) = c_names
+      PC_matrix_t = t(PC_matrix)
+      data.pca <- prcomp(PC_matrix_t, scale = TRUE)
+      fviz_pca_ind(data.pca)
+      ggsave(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/comp_correlation/PCA_", as.character(j), ".pdf"), width = 12, height = 8)
+      
+      corr = rcorr(as.matrix(PC_matrix))
+      pearson = as.data.frame(corr[["r"]])
+      as.ggplot(pheatmap(pearson))
+      ggsave(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/comp_correlation/Pearson_", as.character(j), ".pdf"), width = 12, height = 8)
     }
-    
-    table$PC = PCs
-    PC_table = read.csv(table$PC[1], header=FALSE, skip = 4, sep = "\t")
-    colnames(PC_table) = c("chr", "start", "end", table$sample_ID[1])
-    for(i in 2:length(rownames(table))){
-      PC_i = read.csv(table$PC[i], header=FALSE, skip = 4, sep = "\t")
-      colnames(PC_i) = c("chr", "start", "end", table$sample_ID[i])
-      PC_table = PC_table %>% dplyr::left_join(PC_i, by = c("chr", "start", "end"))
-    }
-    
-    PC_matrix = PC_table %>% dplyr::select(-c("chr", "start", "end"))
-    PC_matrix <- na.omit(PC_matrix)
-    n = length(rownames(table))
-    c_names = colnames(PC_matrix) 
-    colnames(PC_matrix) = c(1:n)
-    PC_matrix = PC_matrix %>% dplyr::mutate(sum = rowSums(PC_matrix)) %>% dplyr::filter(sum != 0) %>% dplyr::filter(sum != n * PC_matrix$'1') %>% dplyr::select(- sum)
-    colnames(PC_matrix) = c_names
-    PC_matrix_t = t(PC_matrix)
-    data.pca <- prcomp(PC_matrix_t, scale = TRUE)
-    fviz_pca_ind(data.pca)
-    ggsave(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/correlation/PCA_", as.character(j), ".pdf"), width = 12, height = 8)
-    
-    corr = rcorr(as.matrix(PC_matrix))
-    pearson = as.data.frame(corr[["r"]])
-    as.ggplot(pheatmap(pearson))
-    ggsave(paste0("/home/shared_folder/output_", current_time, "/untargeted_analysis/correlation/Pearson_", as.character(j), ".pdf"), width = 12, height = 8)
     
     #genomeTrack
     paths = table %>% dplyr::select(c("sample_ID", paste0("iced_h5_", as.character(j))))
